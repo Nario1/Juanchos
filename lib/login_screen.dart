@@ -26,19 +26,27 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // 🔑 Método seguro para actualizar el estado
+  void _safeSetState(VoidCallback callback) {
+    if (mounted) {
+      setState(callback);
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    _safeSetState(() => _isLoading = true);
 
     final result = await _authService.iniciarSesion(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
 
-    setState(() => _isLoading = false);
-
+    // 🔑 Verificar si el widget sigue montado antes de actualizar
     if (!mounted) return;
+
+    _safeSetState(() => _isLoading = false);
 
     if (result['success']) {
       // Navegar a la app principal
@@ -63,15 +71,16 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    _safeSetState(() => _isLoading = true);
 
     final result = await _authService.restablecerPassword(
       _emailController.text.trim(),
     );
 
-    setState(() => _isLoading = false);
-
+    // 🔑 Verificar si el widget sigue montado antes de actualizar
     if (!mounted) return;
+
+    _safeSetState(() => _isLoading = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -169,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
+                          _safeSetState(() => _obscurePassword = !_obscurePassword);
                         },
                       ),
                       border: OutlineInputBorder(
