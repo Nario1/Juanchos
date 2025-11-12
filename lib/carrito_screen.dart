@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'cart_provider.dart';
+import 'login_screen.dart';
 
 class CarritoScreen extends StatelessWidget {
   const CarritoScreen({super.key});
@@ -12,7 +14,7 @@ class CarritoScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Juanchos'),
+        title: const Text('Mi Carrito'),
         centerTitle: true,
         actions: [
           if (!cart.isEmpty)
@@ -67,10 +69,7 @@ class CarritoScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Agrega productos para comenzar',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -121,7 +120,6 @@ class _ItemCarrito extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // Imagen del producto
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: item.imagenUrl.isNotEmpty
@@ -147,8 +145,6 @@ class _ItemCarrito extends StatelessWidget {
                     ),
             ),
             const SizedBox(width: 12),
-
-            // Información del producto
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,10 +161,7 @@ class _ItemCarrito extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'S/ ${item.precio.toStringAsFixed(2)} c/u',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -182,8 +175,6 @@ class _ItemCarrito extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Controles de cantidad
             Column(
               children: [
                 IconButton(
@@ -285,10 +276,7 @@ class _ResumenTotal extends StatelessWidget {
               children: [
                 const Text(
                   'Total a pagar:',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   'S/ ${cart.totalPrecio.toStringAsFixed(2)}',
@@ -315,10 +303,7 @@ class _ResumenTotal extends StatelessWidget {
                 ),
                 child: const Text(
                   'Finalizar Pedido',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -330,8 +315,25 @@ class _ResumenTotal extends StatelessWidget {
 
   void _finalizarPedido(BuildContext context, CartProvider cart) async {
     try {
-      // Crear el pedido en Firebase
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, inicia sesión para realizar un pedido.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+        return;
+      }
+
       final pedido = {
+        'correo_usuario': user.email,
+        'uid_usuario': user.uid, // 🔹 Guardar UID del usuario
         'fecha': FieldValue.serverTimestamp(),
         'total': cart.totalPrecio,
         'cantidad_productos': cart.totalCantidad,
@@ -349,7 +351,6 @@ class _ResumenTotal extends StatelessWidget {
 
       await FirebaseFirestore.instance.collection('pedidos').add(pedido);
 
-      // Mostrar diálogo de confirmación
       if (context.mounted) {
         showDialog(
           context: context,

@@ -1,0 +1,154 @@
+// geolocalizacion_screen.dart
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+
+class GeolocalizacionScreen extends StatefulWidget {
+  const GeolocalizacionScreen({super.key});
+
+  @override
+  State<GeolocalizacionScreen> createState() => _GeolocalizacionScreenState();
+}
+
+class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
+  GoogleMapController? mapController;
+  LatLng? ubicacionUsuario;
+  LatLng? ubicacionTienda;
+  Set<Marker> marcadores = {};
+  Set<Polyline> polylines = {};
+
+  final String apiKey =
+      'AIzaSyBIZrptkE0IGakPhzMzMpq4PaW_gw_D1vk'; // 🔑 Tu API Key de Google
+
+  @override
+  void initState() {
+    super.initState();
+    _obtenerUbicacionUsuario();
+    _obtenerUbicacionTienda();
+  }
+
+  // Obtener ubicación del usuario
+  Future<void> _obtenerUbicacionUsuario() async {
+    bool servicioHabilitado = await Geolocator.isLocationServiceEnabled();
+    if (!servicioHabilitado) return;
+
+    LocationPermission permiso = await Geolocator.checkPermission();
+    if (permiso == LocationPermission.denied) {
+      permiso = await Geolocator.requestPermission();
+      if (permiso == LocationPermission.denied) return;
+    }
+    if (permiso == LocationPermission.deniedForever) return;
+
+    Position posicion = await Geolocator.getCurrentPosition();
+    setState(() {
+      ubicacionUsuario = LatLng(posicion.latitude, posicion.longitude);
+      _agregarMarcadores();
+      _trazarRuta();
+    });
+  }
+
+  // Obtener ubicación de la tienda desde Firebase
+  Future<void> _obtenerUbicacionTienda() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('tienda')
+        .doc('ubicacion')
+        .get();
+
+    if (!snapshot.exists) return;
+
+    final data = snapshot.data();
+    if (data != null && data['ubicacion'] != null) {
+      final geo = data['ubicacion'] as GeoPoint;
+      setState(() {
+        ubicacionTienda = LatLng(geo.latitude, geo.longitude);
+        _agregarMarcadores();
+        _trazarRuta();
+      });
+    }
+  }
+
+  // Agregar marcadores al mapa
+  void _agregarMarcadores() {
+    if (ubicacionUsuario == null && ubicacionTienda == null) return;
+
+    marcadores = {
+      if (ubicacionUsuario != null)
+        Marker(
+          markerId: const MarkerId('usuario'),
+          position: ubicacionUsuario!,
+          infoWindow: const InfoWindow(title: 'Tu ubicación'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueAzure,
+          ),
+        ),
+      if (ubicacionTienda != null)
+        Marker(
+          markerId: const MarkerId('tienda'),
+          position: ubicacionTienda!,
+          infoWindow: const InfoWindow(title: 'Tienda'),
+        ),
+    };
+  }
+
+  // Trazar ruta usando flutter_polyline_points versión 3.x
+  Future<void> _trazarRuta() async {
+    if (ubicacionUsuario == null || ubicacionTienda == null) return;
+
+    PolylinePoints polylinePoints = PolylinePoints(apiKey: apiKey);
+
+    final request = PolylineRequest(
+      origin: PointLatLng(
+        ubicacionUsuario!.latitude,
+        ubicacionUsuario!.longitude,
+      ),
+      destination: PointLatLng(
+        ubicacionTienda!.latitude,
+        ubicacionTienda!.longitude,
+      ),
+      mode: TravelMode.driving,
+    );
+
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      request: request,
+    );
+
+    if (result.points.isNotEmpty) {
+      List<LatLng> puntos = result.points
+          .map((p) => LatLng(p.latitude, p.longitude))
+          .toList();
+
+      setState(() {
+        polylines = {
+          Polyline(
+            polylineId: const PolylineId('ruta'),
+            color: Colors.blue,
+            width: 5,
+            points: puntos,
+          ),
+        };
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ubicación de la Tienda')),
+      body: (ubicacionUsuario == null || ubicacionTienda == null)
+          ? const Center(child: CircularProgressIndicator())
+          : GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: ubicacionUsuario!,
+                zoom: 14,
+              ),
+              markers: marcadores,
+              polylines: polylines,
+              myLocationEnabled: true,
+              onMapCreated: (controller) => mapController = controller,
+            ),
+    );
+  }
+}

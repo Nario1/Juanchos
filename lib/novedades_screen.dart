@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'cart_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'auth_service.dart'; // 🔹 Import AuthService
+import 'login_screen.dart'; // 🔹 Import LoginScreen
 
 class NovedadesScreen extends StatefulWidget {
   const NovedadesScreen({super.key});
@@ -31,6 +33,27 @@ class _NovedadesScreenState extends State<NovedadesScreen> {
     },
   ];
 
+  final AuthService _authService = AuthService();
+
+  Future<void> _cerrarSesion() async {
+    await _authService.cerrarSesion();
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sesión cerrada correctamente'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,6 +61,13 @@ class _NovedadesScreenState extends State<NovedadesScreen> {
         title: const Text('Juanchos'),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Cerrar sesión',
+            onPressed: _cerrarSesion,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -60,10 +90,7 @@ class _NovedadesScreenState extends State<NovedadesScreen> {
                   const SizedBox(width: 8),
                   const Text(
                     'Productos Destacados',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -84,10 +111,7 @@ class _NovedadesScreenState extends State<NovedadesScreen> {
                   const SizedBox(width: 8),
                   const Text(
                     'Categorías Populares',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -106,9 +130,21 @@ class _NovedadesScreenState extends State<NovedadesScreen> {
 
   Widget _buildCategoriasPopulares() {
     final categorias = [
-      {'nombre': 'Alitas', 'icono': FontAwesomeIcons.drumstickBite, 'color': Colors.orange},
-      {'nombre': 'Burguers', 'icono': FontAwesomeIcons.burger, 'color': Colors.red},
-      {'nombre': 'Parrillas', 'icono': FontAwesomeIcons.fire, 'color': Colors.deepOrange},
+      {
+        'nombre': 'Alitas',
+        'icono': FontAwesomeIcons.drumstickBite,
+        'color': Colors.orange,
+      },
+      {
+        'nombre': 'Burguers',
+        'icono': FontAwesomeIcons.burger,
+        'color': Colors.red,
+      },
+      {
+        'nombre': 'Parrillas',
+        'icono': FontAwesomeIcons.fire,
+        'color': Colors.deepOrange,
+      },
     ];
 
     return SizedBox(
@@ -173,7 +209,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   @override
   void initState() {
     super.initState();
-    // Iniciar en una posición alta para simular infinito
     _pageController = PageController(initialPage: 1000);
     _currentPage = 1000;
     _iniciarAutoScroll();
@@ -213,10 +248,9 @@ class _BannerCarouselState extends State<_BannerCarousel> {
               }
             },
             itemBuilder: (context, index) {
-              // Carrusel infinito: usa módulo para repetir banners
               final actualIndex = index % widget.banners.length;
               final banner = widget.banners[actualIndex];
-              
+
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
@@ -239,7 +273,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 ),
                 child: Stack(
                   children: [
-                    // Imagen de fondo
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
@@ -252,7 +285,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                         },
                       ),
                     ),
-                    // Overlay oscuro
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
@@ -266,7 +298,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                         ),
                       ),
                     ),
-                    // Texto
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -297,28 +328,24 @@ class _BannerCarouselState extends State<_BannerCarousel> {
               );
             },
           ),
-          // Indicadores de página
           Positioned(
             bottom: 12,
             right: 16,
             child: Row(
-              children: List.generate(
-                widget.banners.length,
-                (index) {
-                  final actualIndex = _currentPage % widget.banners.length;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: actualIndex == index ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: actualIndex == index
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  );
-                },
-              ),
+              children: List.generate(widget.banners.length, (index) {
+                final actualIndex = _currentPage % widget.banners.length;
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: actualIndex == index ? 24 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: actualIndex == index
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                );
+              }),
             ),
           ),
         ],
@@ -332,23 +359,22 @@ class _ProductosDestacadosSection extends StatefulWidget {
   const _ProductosDestacadosSection();
 
   @override
-  State<_ProductosDestacadosSection> createState() => _ProductosDestacadosSectionState();
+  State<_ProductosDestacadosSection> createState() =>
+      _ProductosDestacadosSectionState();
 }
 
-class _ProductosDestacadosSectionState extends State<_ProductosDestacadosSection> 
+class _ProductosDestacadosSectionState
+    extends State<_ProductosDestacadosSection>
     with AutomaticKeepAliveClientMixin {
-  
   @override
   bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // IMPORTANTE para AutomaticKeepAliveClientMixin
-    
+    super.build(context);
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('productos')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('productos').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -383,7 +409,6 @@ class _ProductosDestacadosSectionState extends State<_ProductosDestacadosSection
           );
         }
 
-        // Filtrar productos destacados manualmente
         final productosDestacados = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           return data['destacado'] == true;
@@ -420,7 +445,8 @@ class _ProductosDestacadosSectionState extends State<_ProductosDestacadosSection
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: productosDestacados.length,
             itemBuilder: (context, index) {
-              final producto = productosDestacados[index].data() as Map<String, dynamic>;
+              final producto =
+                  productosDestacados[index].data() as Map<String, dynamic>;
               final productoId = productosDestacados[index].id;
 
               return _ProductoDestacadoCard(
@@ -453,18 +479,16 @@ class _ProductoDestacadoCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 6),
       child: Card(
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
                   child: Image.network(
                     producto['l_imag'] ?? '',
                     height: 120,
@@ -479,7 +503,6 @@ class _ProductoDestacadoCard extends StatelessWidget {
                     },
                   ),
                 ),
-                // Badge de destacado
                 Positioned(
                   top: 8,
                   right: 8,
@@ -510,7 +533,6 @@ class _ProductoDestacadoCard extends StatelessWidget {
                 ),
               ],
             ),
-            // Información
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(8),
@@ -563,10 +585,7 @@ class _ProductoDestacadoCard extends StatelessWidget {
                                 ),
                               );
                             },
-                            icon: const Icon(
-                              Icons.add_shopping_cart,
-                              size: 18,
-                            ),
+                            icon: const Icon(Icons.add_shopping_cart, size: 18),
                             style: IconButton.styleFrom(
                               backgroundColor: Colors.orange,
                               foregroundColor: Colors.white,

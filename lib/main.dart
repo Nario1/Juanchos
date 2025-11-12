@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+
+// 🔸 Importaciones de tus pantallas
 import 'cart_provider.dart';
 import 'productos_screen.dart';
 import 'novedades_screen.dart';
 import 'carrito_screen.dart';
+import 'login_screen.dart';
+import 'auth_service.dart';
+import 'geolocalizacion_screen.dart'; // 🗺️ NUEVA PANTALLA
+import 'ModoChefScreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +27,7 @@ class MyApp extends StatelessWidget {
       create: (_) => CartProvider(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Archi',
+        title: 'Juanchos',
         theme: ThemeData(
           primarySwatch: Colors.orange,
           useMaterial3: true,
@@ -31,12 +37,42 @@ class MyApp extends StatelessWidget {
             elevation: 0,
           ),
         ),
-        home: const MainNavigation(),
+        home: const AuthWrapper(),
       ),
     );
   }
 }
 
+// ✅ Verifica si hay sesión activa
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authService = AuthService();
+
+    return StreamBuilder(
+      stream: authService.authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: Colors.orange),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          return const MainNavigation();
+        }
+
+        return const LoginScreen();
+      },
+    );
+  }
+}
+
+// 🧭 Navegación principal con 4 pestañas
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -51,6 +87,8 @@ class _MainNavigationState extends State<MainNavigation> {
     const ProductosScreen(),
     const NovedadesScreen(),
     const CarritoScreen(),
+    const GeolocalizacionScreen(),
+    const ChefScreen(), // 🧑‍🍳 NUEVA PANTALLA DE MODO CHEF
   ];
 
   @override
@@ -67,6 +105,7 @@ class _MainNavigationState extends State<MainNavigation> {
           });
         },
         selectedItemColor: Colors.orange,
+        unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         items: [
           const BottomNavigationBarItem(
@@ -84,6 +123,14 @@ class _MainNavigationState extends State<MainNavigation> {
               child: const Icon(Icons.shopping_cart),
             ),
             label: 'Carrito',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.map),
+            label: 'Ubicación',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.restaurant_menu),
+            label: 'Modo Chef', // 🧑‍🍳 NUEVA PESTAÑA
           ),
         ],
       ),
