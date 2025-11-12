@@ -9,6 +9,7 @@ import 'login_screen.dart';
 import 'ProductoDetalleScreen.dart'; // ✅ Importamos la pantalla de detalle
 import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:shimmer/shimmer.dart'; // Para efecto shimmer
+import 'recommendations_service.dart'; // ✅ Servicio de recomendaciones
 
 class ProductosScreen extends StatefulWidget {
   const ProductosScreen({super.key});
@@ -34,6 +35,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   ];
 
   final AuthService _authService = AuthService();
+  final RecommendationsService _recommendationsService = RecommendationsService();
 
   @override
   void dispose() {
@@ -121,6 +123,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
               ),
             ),
           ),
+          // ✅ Sección de productos recomendados (solo si no hay búsqueda activa)
+          if (_searchQuery.isEmpty) _SeccionRecomendados(),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 16),
             height: 80,
@@ -323,6 +327,312 @@ class _ProductosScreenState extends State<ProductosScreen> {
       ),
     );
     HapticFeedback.lightImpact();
+  }
+}
+
+// ✅ Widget para la sección de productos recomendados
+class _SeccionRecomendados extends StatelessWidget {
+  final RecommendationsService _recommendationsService = RecommendationsService();
+
+  _SeccionRecomendados({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<QueryDocumentSnapshot>>(
+      stream: _recommendationsService.obtenerStreamProductosRecomendados(limit: 5),
+      builder: (context, snapshot) {
+        // Si está cargando, mostrar un indicador pequeño o nada
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+
+        // Si hay error o no hay datos, no mostrar nada
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final productosRecomendados = snapshot.data!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.recommend,
+                    color: Colors.orange,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Recomendados para ti',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Basado en tus compras',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.orange[800],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 220,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: productosRecomendados.length,
+                itemBuilder: (context, index) {
+                  final productoDoc = productosRecomendados[index];
+                  final producto = productoDoc.data() as Map<String, dynamic>;
+                  final productoId = productoDoc.id;
+
+                  return _ProductoRecomendadoCard(
+                    id: productoId,
+                    nombre: producto['l_nomb'] ?? 'Sin nombre',
+                    descripcion: producto['l_desc'] ?? 'Sin descripción',
+                    precio: (producto['s_prec'] ?? 0.0).toDouble(),
+                    imagenUrl: producto['l_imag'] ?? '',
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ✅ Widget para la tarjeta de producto recomendado (formato horizontal)
+class _ProductoRecomendadoCard extends StatelessWidget {
+  final String id;
+  final String nombre;
+  final String descripcion;
+  final double precio;
+  final String imagenUrl;
+
+  const _ProductoRecomendadoCard({
+    required this.id,
+    required this.nombre,
+    required this.descripcion,
+    required this.precio,
+    required this.imagenUrl,
+  });
+
+  void _abrirDetalle(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductoDetalleScreen(
+          id: id,
+          nombre: nombre,
+          descripcion: descripcion,
+          precio: precio,
+          imagenUrl: imagenUrl,
+        ),
+      ),
+    );
+  }
+
+  void _agregarAlCarrito(BuildContext context) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+
+    cart.agregarProducto(
+      id,
+      nombre,
+      descripcion,
+      precio,
+      imagenUrl,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$nombre agregado al carrito'),
+        duration: const Duration(milliseconds: 500),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    HapticFeedback.lightImpact();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _abrirDetalle(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Badge de "Recomendado"
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.star, size: 12, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'Recomendado',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Imagen del producto
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: imagenUrl.isNotEmpty
+                  ? Image.network(
+                      imagenUrl,
+                      height: 100,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 100,
+                          color: Colors.grey[300],
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 30,
+                            color: Colors.grey[500],
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Shimmer.fromColors(
+                          baseColor: Colors.grey[300]!,
+                          highlightColor: Colors.grey[100]!,
+                          child: Container(
+                            height: 100,
+                            width: double.infinity,
+                            color: Colors.grey[300],
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      height: 100,
+                      color: Colors.grey[300],
+                      child: Icon(
+                        Icons.image,
+                        size: 30,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+            ),
+            // Información del producto
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nombre,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      descripcion,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey[600],
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'S/ ${precio.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _agregarAlCarrito(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.add_shopping_cart,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
