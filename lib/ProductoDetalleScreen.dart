@@ -23,7 +23,7 @@ class ProductoDetalleScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context, listen: false);
 
-    void _agregarAlCarrito() {
+    void agregarAlCarrito() {
       cart.agregarProducto(id, nombre, descripcion, precio, imagenUrl);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -97,7 +97,7 @@ class ProductoDetalleScreen extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: _agregarAlCarrito,
+                onPressed: agregarAlCarrito,
                 icon: const Icon(Icons.add_shopping_cart),
                 label: const Text('Agregar al carrito'),
                 style: ElevatedButton.styleFrom(

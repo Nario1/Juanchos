@@ -43,6 +43,9 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
     if (permiso == LocationPermission.deniedForever) return;
 
     Position posicion = await Geolocator.getCurrentPosition();
+
+    if (!mounted) return; // 🔹 Verifica que el widget siga montado
+
     setState(() {
       ubicacionUsuario = LatLng(posicion.latitude, posicion.longitude);
       _agregarMarcadores();
@@ -62,6 +65,9 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
     final data = snapshot.data();
     if (data != null && data['ubicacion'] != null) {
       final geo = data['ubicacion'] as GeoPoint;
+
+      if (!mounted) return; // 🔹 Verifica que el widget siga montado
+
       setState(() {
         ubicacionTienda = LatLng(geo.latitude, geo.longitude);
         _agregarMarcadores();
@@ -74,8 +80,10 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
   void _agregarMarcadores() {
     if (ubicacionUsuario == null && ubicacionTienda == null) return;
 
-    marcadores = {
-      if (ubicacionUsuario != null)
+    final nuevosMarcadores = <Marker>{};
+
+    if (ubicacionUsuario != null) {
+      nuevosMarcadores.add(
         Marker(
           markerId: const MarkerId('usuario'),
           position: ubicacionUsuario!,
@@ -84,13 +92,21 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
             BitmapDescriptor.hueAzure,
           ),
         ),
-      if (ubicacionTienda != null)
+      );
+    }
+
+    if (ubicacionTienda != null) {
+      nuevosMarcadores.add(
         Marker(
           markerId: const MarkerId('tienda'),
           position: ubicacionTienda!,
           infoWindow: const InfoWindow(title: 'Tienda'),
         ),
-    };
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => marcadores = nuevosMarcadores);
   }
 
   // Trazar ruta usando flutter_polyline_points versión 3.x
@@ -115,7 +131,7 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
       request: request,
     );
 
-    if (result.points.isNotEmpty) {
+    if (result.points.isNotEmpty && mounted) {
       List<LatLng> puntos = result.points
           .map((p) => LatLng(p.latitude, p.longitude))
           .toList();
@@ -136,7 +152,7 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ubicación de la Tienda')),
+      appBar: null,
       body: (ubicacionUsuario == null || ubicacionTienda == null)
           ? const Center(child: CircularProgressIndicator())
           : GoogleMap(

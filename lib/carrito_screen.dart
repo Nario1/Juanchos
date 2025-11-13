@@ -13,20 +13,7 @@ class CarritoScreen extends StatelessWidget {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mi Carrito'),
-        centerTitle: true,
-        actions: [
-          if (!cart.isEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep),
-              onPressed: () {
-                _mostrarDialogoLimpiar(context, cart);
-              },
-              tooltip: 'Vaciar carrito',
-            ),
-        ],
-      ),
+      appBar: null,
       body: cart.isEmpty
           ? _carritoVacio()
           : Column(
@@ -155,9 +142,13 @@ class _ItemCarrito extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
+                  if (item.descripcion.isNotEmpty)
+                    Text(
+                      item.descripcion, // 🔹 Mostrar ingredientes
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                    ),
                   const SizedBox(height: 4),
                   Text(
                     'S/ ${item.precio.toStringAsFixed(2)} c/u',
@@ -342,6 +333,7 @@ class _ResumenTotal extends StatelessWidget {
           return {
             'id_producto': item.id,
             'nombre': item.nombre,
+            'descripcion': item.descripcion, // 🔹 Ingredientes añadidos
             'precio': item.precio,
             'cantidad': item.cantidad,
             'subtotal': item.subtotal,

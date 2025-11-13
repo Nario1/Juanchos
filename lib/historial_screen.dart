@@ -12,8 +12,6 @@ class HistorialScreen extends StatelessWidget {
     if (user == null) return const Stream.empty();
 
     final ref = FirebaseFirestore.instance.collection('pedidos');
-
-    // ✅ Filtro por correo del usuario logueado
     return ref.where('correo_usuario', isEqualTo: user.email).snapshots();
   }
 
@@ -76,7 +74,6 @@ class HistorialScreen extends StatelessWidget {
                   );
                 }
 
-                // 🔹 Ordenar manualmente por fecha (ya que Firestore puede no permitir orderBy+where sin índice)
                 final pedidos = snapshot.data!.docs;
                 pedidos.sort((a, b) {
                   final fa =
@@ -169,32 +166,55 @@ class HistorialScreen extends StatelessWidget {
                               final cantidad = prod["cantidad"] ?? 1;
                               final subtotal = (prod["subtotal"] ?? 0)
                                   .toDouble();
+                              final descripcion =
+                                  prod["descripcion"] ?? ""; // 🔹 Ingredientes
+
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 4,
                                 ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        "$nombre (x$cantidad)",
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 14,
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            "$nombre (x$cantidad)",
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          "S/ ${subtotal.toStringAsFixed(2)}",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (descripcion.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 4,
+                                          top: 2,
+                                        ),
+                                        child: Text(
+                                          descripcion,
+                                          style: const TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    Text(
-                                      "S/ ${subtotal.toStringAsFixed(2)}",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
                                   ],
                                 ),
                               );
