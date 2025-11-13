@@ -106,8 +106,10 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
   void _agregarMarcadores() {
     if (ubicacionUsuario == null && ubicacionTienda == null) return;
 
-    marcadores = {
-      if (ubicacionUsuario != null)
+    final nuevosMarcadores = <Marker>{};
+
+    if (ubicacionUsuario != null) {
+      nuevosMarcadores.add(
         Marker(
           markerId: const MarkerId('usuario'),
           position: ubicacionUsuario!,
@@ -116,13 +118,21 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
             BitmapDescriptor.hueAzure,
           ),
         ),
-      if (ubicacionTienda != null)
+      );
+    }
+
+    if (ubicacionTienda != null) {
+      nuevosMarcadores.add(
         Marker(
           markerId: const MarkerId('tienda'),
           position: ubicacionTienda!,
           infoWindow: const InfoWindow(title: 'Tienda'),
         ),
-    };
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => marcadores = nuevosMarcadores);
   }
 
   // Trazar ruta usando flutter_polyline_points versión 3.x
@@ -175,7 +185,7 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ubicación de la Tienda')),
+      appBar: null,
       body: (ubicacionUsuario == null || ubicacionTienda == null)
           ? const Center(child: CircularProgressIndicator())
           : GoogleMap(

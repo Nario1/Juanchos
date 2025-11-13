@@ -63,12 +63,27 @@ class _ChefScreenState extends State<ChefScreen> {
     return total;
   }
 
+  bool _puedeAvanzar() {
+    switch (_step) {
+      case 0:
+        return _base != null;
+      case 1:
+        return proteinas.values.any((v) => v);
+      case 2:
+        return vegetales.values.any((v) => v);
+      case 3:
+        return extras.values.any((v) => v);
+      default:
+        return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Modo Chef'), centerTitle: true),
+      appBar: null,
       body: Column(
         children: [
           Expanded(child: _buildStep()),
@@ -77,22 +92,57 @@ class _ChefScreenState extends State<ChefScreen> {
             child: Row(
               children: [
                 if (_step > 0)
-                  ElevatedButton(
-                    onPressed: () => setState(() => _step--),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () => setState(() => _step--),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: const Text(
+                          'Anterior',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                    child: const Text('Anterior'),
                   ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _step < 4
-                      ? () => setState(() => _step++)
-                      : () => _agregarAlCarrito(cart),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                if (_step > 0) const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _puedeAvanzar()
+                          ? (_step < 4
+                                ? () => setState(() => _step++)
+                                : () => _agregarAlCarrito(cart))
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: Text(
+                        _step < 4 ? 'Siguiente' : 'Agregar al carrito',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Text(_step < 4 ? 'Siguiente' : 'Agregar al carrito'),
                 ),
               ],
             ),
@@ -111,7 +161,7 @@ class _ChefScreenState extends State<ChefScreen> {
 
   Widget _buildStep() {
     switch (_step) {
-      case 0: // Base
+      case 0:
         return ListView(
           padding: const EdgeInsets.all(12),
           children: bases.map((b) {
@@ -123,13 +173,13 @@ class _ChefScreenState extends State<ChefScreen> {
             );
           }).toList(),
         );
-      case 1: // Proteínas
+      case 1:
         return _buildCheckboxList('Proteínas', proteinas);
-      case 2: // Vegetales
+      case 2:
         return _buildCheckboxList('Vegetales', vegetales);
-      case 3: // Extras
+      case 3:
         return _buildCheckboxList('Extras', extras);
-      case 4: // Resumen visual
+      case 4:
         return _buildResumen();
       default:
         return const SizedBox();
@@ -151,7 +201,7 @@ class _ChefScreenState extends State<ChefScreen> {
             value: items[key],
             onChanged: (val) => setState(() => items[key] = val ?? false),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -188,7 +238,6 @@ class _ChefScreenState extends State<ChefScreen> {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          // Aquí podrías agregar un widget que muestre imágenes apiladas del plato
           Container(
             height: 200,
             width: double.infinity,
@@ -231,7 +280,7 @@ class _ChefScreenState extends State<ChefScreen> {
       ),
     );
 
-    // Reset
+    // Resetear selección
     setState(() {
       _step = 0;
       _base = null;

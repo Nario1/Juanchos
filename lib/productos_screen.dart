@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'cart_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'historial_screen.dart';
 import 'auth_service.dart';
 import 'login_screen.dart';
 import 'ProductoDetalleScreen.dart'; // ✅ Importamos la pantalla de detalle
@@ -65,29 +64,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Juanchos'),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history, color: Colors.white),
-            tooltip: 'Historial de pedidos',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const HistorialScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar sesión',
-            onPressed: _cerrarSesion,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: null,
       body: Column(
         children: [
           Padding(
