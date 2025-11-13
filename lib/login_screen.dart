@@ -65,11 +65,10 @@ class _LoginScreenState extends State<LoginScreen>
       password: _passwordController.text.trim(),
     );
 
-    // 🔑 Verificar si el widget sigue montado antes de actualizar
     if (!mounted) return;
+    setState(() => _isLoading = false);
 
-    _safeSetState(() => _isLoading = false);
-
+    if (!mounted) return;
     if (result['success']) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigation()),
@@ -94,17 +93,17 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
-    _safeSetState(() => _isLoading = true);
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
     final result = await _authService.restablecerPassword(
       _emailController.text.trim(),
     );
 
-    // 🔑 Verificar si el widget sigue montado antes de actualizar
     if (!mounted) return;
+    setState(() => _isLoading = false);
 
-    _safeSetState(() => _isLoading = false);
-
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(result['message']),
@@ -187,7 +186,8 @@ class _LoginScreenState extends State<LoginScreen>
                               : Icons.visibility,
                         ),
                         onPressed: () {
-                          _safeSetState(() => _obscurePassword = !_obscurePassword);
+                          if (!mounted) return;
+                          setState(() => _obscurePassword = !_obscurePassword);
                         },
                       ),
                       border: OutlineInputBorder(
