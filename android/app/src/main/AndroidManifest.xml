@@ -4,6 +4,13 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- 📸 Permiso de cámara -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- 🖼️ Permisos para galería -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Android 13 (API 33) permisos separados -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
     <application
         android:name="${applicationName}"

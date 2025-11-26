@@ -1,7 +1,7 @@
 name: semana7_castillo
 description: "A new Flutter project."
 publish_to: "none"
-version: 0.1.0
+version: 0.2.2
 
 environment:
   sdk: ^3.9.2
@@ -23,17 +23,31 @@ dependencies:
   http: ^1.2.0 # 👈 Añadido para evitar el error en ubicacion_screen.dart
   flutter_polyline_points: 3.1.0
   shimmer: ^3.0.0 # <--- Agrega esto
+  image_picker: ^1.1.0
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.3.5
+
+flutter_native_splash:
+  color: "#FFA500"
+  image: assets/splash_logo.png
+  android: true
+  ios: true
+  android_12:
+    image: assets/splash_logo.png
+    color: "#FFA500"
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icono_app.png"
+  image_path: "assets/icono.png"
+  android_adaptive_icon_background: "#FFA500"
+  android_adaptive_icon_foreground: "assets/icono_foreground.png"
 
 flutter:
   uses-material-design: true

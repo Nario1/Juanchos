@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'widgets/custom_app_bar.dart';
+import 'perfil_screen.dart';
 
 // 🔸 Importaciones de tus pantallas y providers
 import 'cart_provider.dart';
@@ -36,7 +37,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void _startInactivityTimer() {
     _inactivityTimer?.cancel();
     _inactivityTimer = Timer(const Duration(minutes: 5), () {
-      // Verificar si realmente han pasado 5 minutos sin interacción
       final now = DateTime.now();
       if (_lastInteraction != null &&
           now.difference(_lastInteraction!).inMinutes >= 5) {
@@ -68,14 +68,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  // 🔥🔥🔥 CORREGIDO: YA NO SE CIERRA SESIÓN AL ABRIR LA CÁMARA 🔥🔥🔥
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      // 🔹 App minimizada: cerrar sesión inmediatamente
-      FirebaseAuth.instance.signOut();
+      // Ya NO cerramos sesión aquí
       _inactivityTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
-      // 🔹 Al volver a la app, reinicia el timer
       _lastInteraction = DateTime.now();
       _startInactivityTimer();
     }
@@ -147,7 +146,6 @@ class _SplashScreenState extends State<SplashScreen>
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _controller.forward();
 
-    // Después de 3 segundos, verifica el estado de autenticación
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -164,7 +162,6 @@ class _SplashScreenState extends State<SplashScreen>
                   );
                 }
 
-                // Si hay usuario logueado, va a MainNavigation, sino a LoginScreen
                 if (snapshot.hasData) {
                   return const MainNavigation();
                 }
@@ -191,7 +188,6 @@ class _SplashScreenState extends State<SplashScreen>
       body: SizedBox.expand(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ScaleTransition(
               scale: _animation,
@@ -200,7 +196,6 @@ class _SplashScreenState extends State<SplashScreen>
             const SizedBox(height: 20),
             const Text(
               "Bienvenido a Juanchos",
-              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
           ],
@@ -227,6 +222,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const CarritoScreen(),
     const GeolocalizacionScreen(),
     const ChefScreen(),
+    const PerfilScreen(),
   ];
 
   @override
@@ -240,11 +236,11 @@ class _MainNavigationState extends State<MainNavigation> {
         },
       ),
       body: _screens[_selectedIndex],
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() => _selectedIndex = index);
-          // 🔹 REINICIAR TIMER AL TOCAR BOTONES DEL NAVEGADOR
           _resetAppTimer();
         },
         selectedItemColor: Colors.orange,
@@ -275,12 +271,16 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.restaurant_menu),
             label: 'Modo Chef',
           ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
         ],
       ),
     );
   }
 
-  // 🔹 MÉTODO PARA REINICIAR EL TIMER DESDE MainNavigation
+  // 🔹 MÉTODO PARA REINICIAR TIMER DESDE MainNavigation
   void _resetAppTimer() {
     final myAppState = context.findAncestorStateOfType<_MyAppState>();
     myAppState?._resetInactivityTimer();
