@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import 'register_screen.dart';
 import 'main.dart';
+import 'widgets/logo_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,7 +11,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -19,33 +21,60 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+    _controller.forward();
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  // 🔑 Método seguro para actualizar el estado
+  void _safeSetState(VoidCallback callback) {
+    if (mounted) {
+      setState(callback);
+    }
   }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    _safeSetState(() => _isLoading = true);
 
     final result = await _authService.iniciarSesion(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (!mounted) return;
-
     if (result['success']) {
-      // Navegar a la app principal
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigation()),
       );
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
       );
@@ -54,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _recuperarPassword() async {
     if (_emailController.text.trim().isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ingresa tu correo para recuperar la contraseña'),
@@ -63,16 +93,17 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     final result = await _authService.restablecerPassword(
       _emailController.text.trim(),
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(result['message']),
@@ -87,29 +118,18 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Logo o icono
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.outdoor_grill_sharp,
-                      size: 60,
-                      color: Colors.white,
-                    ),
+                  ScaleTransition(
+                    scale: _animation,
+                    child: const LogoWidget(size: 120),
                   ),
                   const SizedBox(height: 24),
-
-                  // Título
                   const Text(
                     'Juanchos',
                     style: TextStyle(
@@ -125,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Campo de email
+                  // Email
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -144,18 +164,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.isEmpty)
                         return 'Ingresa tu correo';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Correo no válido';
-                      }
+                      if (!value.contains('@')) return 'Correo no válido';
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // Campo de contraseña
+                  // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -169,6 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () {
+                          if (!mounted) return;
                           setState(() => _obscurePassword = !_obscurePassword);
                         },
                       ),
@@ -184,18 +202,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.isEmpty)
                         return 'Ingresa tu contraseña';
-                      }
-                      if (value.length < 6) {
-                        return 'Mínimo 6 caracteres';
-                      }
+                      if (value.length < 6) return 'Mínimo 6 caracteres';
                       return null;
                     },
                   ),
                   const SizedBox(height: 8),
 
-                  // Olvidé mi contraseña
+                  // Forgot password
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -208,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Botón de login
+                  // Login button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -245,19 +260,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     children: [
                       Expanded(child: Divider(color: Colors.grey[400])),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'O',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('O', style: TextStyle(color: Colors.grey)),
                       ),
                       Expanded(child: Divider(color: Colors.grey[400])),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // Botón de registro
+                  // Register button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -265,6 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _isLoading
                           ? null
                           : () {
+                              if (!mounted) return;
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => const RegisterScreen(),

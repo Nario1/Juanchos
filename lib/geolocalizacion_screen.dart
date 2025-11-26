@@ -20,53 +20,85 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
   Set<Marker> marcadores = {};
   Set<Polyline> polylines = {};
 
-  final String apiKey =
-      'AIzaSyBIZrptkE0IGakPhzMzMpq4PaW_gw_D1vk'; // 🔑 Tu API Key de Google
+  // 🔑 Agrega esta variable para controlar el estado del widget
+  bool _isMounted = false;
+
+  final String apiKey = 'AIzaSyBIZrptkE0IGakPhzMzMpq4PaW_gw_D1vk';
 
   @override
   void initState() {
     super.initState();
+    _isMounted = true;
     _obtenerUbicacionUsuario();
     _obtenerUbicacionTienda();
   }
 
+  @override
+  void dispose() {
+    _isMounted = false; // 🔑 Marcar como no montado al destruir
+    super.dispose();
+  }
+
+  // 🔑 Método seguro para llamar setState()
+  void _safeSetState(VoidCallback callback) {
+    if (_isMounted) {
+      setState(callback);
+    }
+  }
+
   // Obtener ubicación del usuario
   Future<void> _obtenerUbicacionUsuario() async {
-    bool servicioHabilitado = await Geolocator.isLocationServiceEnabled();
-    if (!servicioHabilitado) return;
+    try {
+      bool servicioHabilitado = await Geolocator.isLocationServiceEnabled();
+      if (!servicioHabilitado) return;
 
-    LocationPermission permiso = await Geolocator.checkPermission();
-    if (permiso == LocationPermission.denied) {
-      permiso = await Geolocator.requestPermission();
-      if (permiso == LocationPermission.denied) return;
+      LocationPermission permiso = await Geolocator.checkPermission();
+      if (permiso == LocationPermission.denied) {
+        permiso = await Geolocator.requestPermission();
+        if (permiso == LocationPermission.denied) return;
+      }
+      if (permiso == LocationPermission.deniedForever) return;
+
+      Position posicion = await Geolocator.getCurrentPosition();
+      
+      // 🔑 Verificar si el widget sigue montado antes de actualizar
+      if (!_isMounted) return;
+      
+      _safeSetState(() {
+        ubicacionUsuario = LatLng(posicion.latitude, posicion.longitude);
+        _agregarMarcadores();
+        _trazarRuta();
+      });
+    } catch (e) {
+      print('Error obteniendo ubicación usuario: $e');
     }
-    if (permiso == LocationPermission.deniedForever) return;
-
-    Position posicion = await Geolocator.getCurrentPosition();
-    setState(() {
-      ubicacionUsuario = LatLng(posicion.latitude, posicion.longitude);
-      _agregarMarcadores();
-      _trazarRuta();
-    });
   }
 
   // Obtener ubicación de la tienda desde Firebase
   Future<void> _obtenerUbicacionTienda() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('tienda')
-        .doc('ubicacion')
-        .get();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('tienda')
+          .doc('ubicacion')
+          .get();
 
-    if (!snapshot.exists) return;
+      // 🔑 Verificar si el widget sigue montado
+      if (!_isMounted) return;
 
-    final data = snapshot.data();
-    if (data != null && data['ubicacion'] != null) {
-      final geo = data['ubicacion'] as GeoPoint;
-      setState(() {
-        ubicacionTienda = LatLng(geo.latitude, geo.longitude);
-        _agregarMarcadores();
-        _trazarRuta();
-      });
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data();
+      if (data != null && data['ubicacion'] != null) {
+        final geo = data['ubicacion'] as GeoPoint;
+        
+        _safeSetState(() {
+          ubicacionTienda = LatLng(geo.latitude, geo.longitude);
+          _agregarMarcadores();
+          _trazarRuta();
+        });
+      }
+    } catch (e) {
+      print('Error obteniendo ubicación tienda: $e');
     }
   }
 
@@ -74,8 +106,10 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
   void _agregarMarcadores() {
     if (ubicacionUsuario == null && ubicacionTienda == null) return;
 
-    marcadores = {
-      if (ubicacionUsuario != null)
+    final nuevosMarcadores = <Marker>{};
+
+    if (ubicacionUsuario != null) {
+      nuevosMarcadores.add(
         Marker(
           markerId: const MarkerId('usuario'),
           position: ubicacionUsuario!,
@@ -84,59 +118,74 @@ class _GeolocalizacionScreenState extends State<GeolocalizacionScreen> {
             BitmapDescriptor.hueAzure,
           ),
         ),
-      if (ubicacionTienda != null)
+      );
+    }
+
+    if (ubicacionTienda != null) {
+      nuevosMarcadores.add(
         Marker(
           markerId: const MarkerId('tienda'),
           position: ubicacionTienda!,
           infoWindow: const InfoWindow(title: 'Tienda'),
         ),
-    };
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => marcadores = nuevosMarcadores);
   }
 
   // Trazar ruta usando flutter_polyline_points versión 3.x
   Future<void> _trazarRuta() async {
     if (ubicacionUsuario == null || ubicacionTienda == null) return;
 
-    PolylinePoints polylinePoints = PolylinePoints(apiKey: apiKey);
+    try {
+      PolylinePoints polylinePoints = PolylinePoints(apiKey: apiKey);
 
-    final request = PolylineRequest(
-      origin: PointLatLng(
-        ubicacionUsuario!.latitude,
-        ubicacionUsuario!.longitude,
-      ),
-      destination: PointLatLng(
-        ubicacionTienda!.latitude,
-        ubicacionTienda!.longitude,
-      ),
-      mode: TravelMode.driving,
-    );
+      final request = PolylineRequest(
+        origin: PointLatLng(
+          ubicacionUsuario!.latitude,
+          ubicacionUsuario!.longitude,
+        ),
+        destination: PointLatLng(
+          ubicacionTienda!.latitude,
+          ubicacionTienda!.longitude,
+        ),
+        mode: TravelMode.driving,
+      );
 
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      request: request,
-    );
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        request: request,
+      );
 
-    if (result.points.isNotEmpty) {
-      List<LatLng> puntos = result.points
-          .map((p) => LatLng(p.latitude, p.longitude))
-          .toList();
+      // 🔑 Verificar si el widget sigue montado
+      if (!_isMounted) return;
 
-      setState(() {
-        polylines = {
-          Polyline(
-            polylineId: const PolylineId('ruta'),
-            color: Colors.blue,
-            width: 5,
-            points: puntos,
-          ),
-        };
-      });
+      if (result.points.isNotEmpty) {
+        List<LatLng> puntos = result.points
+            .map((p) => LatLng(p.latitude, p.longitude))
+            .toList();
+
+        _safeSetState(() {
+          polylines = {
+            Polyline(
+              polylineId: const PolylineId('ruta'),
+              color: Colors.blue,
+              width: 5,
+              points: puntos,
+            ),
+          };
+        });
+      }
+    } catch (e) {
+      print('Error trazando ruta: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ubicación de la Tienda')),
+      appBar: null,
       body: (ubicacionUsuario == null || ubicacionTienda == null)
           ? const Center(child: CircularProgressIndicator())
           : GoogleMap(
